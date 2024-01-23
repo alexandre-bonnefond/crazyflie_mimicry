@@ -1,4 +1,4 @@
-# crazyflie_mimicry
+# Body Motion Swarm Controller
 
 ## Project Overview
 
