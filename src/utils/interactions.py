@@ -101,12 +101,12 @@ def compute_friction_alignment(positions, velocities, C_frict_l, V_frict_l,
     return alignment_force
 
 
-def map_wrist_pos_to_box(pos, box_z):
+# def map_wrist_pos_to_box(pos, box_z):
 
-    for i in range(len(pos)):
-        if pos[i] == -1:
-            continue
-        pos[i] = (box_z[0] - box_z[1]) * pos[i] + box_z[1]
+#     for i in range(len(pos)):
+#         if pos[i] == -1:
+#             continue
+#         pos[i] = (box_z[0] - box_z[1]) * pos[i] + box_z[1]
 
-    return pos
+#     return pos
 

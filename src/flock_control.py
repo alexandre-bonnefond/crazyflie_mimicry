@@ -5,8 +5,10 @@ import cflib.crtp
 from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
 from cflib.crazyflie.log import LogConfig
+import pose_input
 import utils.interactions as interactions
 import utils.maths as maths
+import utils.camera_calculation as camcalc
 
 
 pos_dict = {}
@@ -56,7 +58,7 @@ def start_distance_printing(scf):
 
 uris = [
     'radio://0/80/2M/E7E7E7E701',
-    'radio://0/80/2M/E7E7E7E702',
+    # 'radio://0/80/2M/E7E7E7E702',
     'radio://0/80/2M/E7E7E7E703',
 ]
 
@@ -112,41 +114,69 @@ def run_sequence(scf):
     try:
         cf = scf.cf
 
-        take_off(cf, 0.6)
+        take_off(cf, 1)
         start_time = time.time()
         current_time = start_time
-        total_time = 20
-        box_limits = [1.0, 1.0, 2.0]
+        total_time = 15
+        box_limits = [1.0, 1.0, 1.8]
         v_0 = 0.35
+        eq_dist = 0.35
+        yaw = 0
         while current_time < total_time + start_time:
             # start_distance_printing(scf)
-            
+            # print(pose_input.wrists_pos[0])
             going_back = is_in_box_limit(box_limits, pos_dict, scf.cf.link_uri, v_0)
-
+            eq_dist = camcalc.compute_equilibrium_distance(pose_input.left_wrist_pos, pose_input.right_wrist_pos, eq_dist)
+            # yaw = camcalc.compute_yaw(pose_input.left_wrist_pos, pose_input.right_wrist_pos, yaw)
+            # print(eq_dist)
             if all(el == 0 for el in going_back):
-                att = interactions.compute_attraction_force(pos_dict, scf.cf.link_uri, 0.45, 0.3, False)
-                rep = interactions.compute_repulsion_force(pos_dict, scf.cf.link_uri, 0.35, 2, False)
+                att = interactions.compute_attraction_force(pos_dict, scf.cf.link_uri, eq_dist + 0.1, 0.3, False)
+                rep = interactions.compute_repulsion_force(pos_dict, scf.cf.link_uri, eq_dist, 2, False)
                 spp = interactions.compute_self_propulsion(vel_dict, scf.cf.link_uri, v_0)
                 ali = interactions.compute_friction_alignment(pos_dict, vel_dict, 0.8, 0.2, 1, 5, 0.6, scf.cf.link_uri)
 
-                force = rep + ali + spp + att
+                zforce = camcalc.compute_prefered_direction(pose_input.left_wrist_pos, pose_input.right_wrist_pos, 2*v_0)
+                # pos = interactions.map_wrist_pos_to_box(pose_input.wrists_pos, [0.2, box_limits[-1]])
+                # print("{} and {}".format(pos[0], pos[1]))
+                force = rep + ali + spp + att + zforce
+
+                # force = rep + att + zforce
+
+                # if scf.cf.link_uri == uris[0]:
+                #     if pos[0] != -1:
+                #         zdist = pos[0]
+                #         # cf.commander.send_hover_setpoint(0, 0, 0, zdist)
+                #         print("left is going at {}".format((0.5 - zdist) * v_0 * 2))
+                #         cf.commander.send_velocity_world_setpoint(0, 0, (0.5 - zdist) * v_0 * 2, 0)
+                #     else:
+                #         cf.commander.send_velocity_world_setpoint(force[0], force[1], force[2], 0)
+
+                # else:
+                #     if pos[1] != -1:
+                #         zdist = pos[1]
+                #         # cf.commander.send_hover_setpoint(0, 0, 0, zdist)
+                #         print("right is going at {}".format((0.5 - zdist) * v_0 * 2))
+                #         cf.commander.send_velocity_world_setpoint(0, 0, (0.5 - zdist) * v_0 * 2, 0)
+                #     else:
+                #         cf.commander.send_velocity_world_setpoint(force[0], force[1], force[2], 0)
 
                 cf.commander.send_velocity_world_setpoint(force[0], force[1], force[2], 0)
+                print('uri: {} force: ({}, {}, {})'.format(scf.cf.link_uri, force[0], force[1], force[2]))
                 time.sleep(0.1)
+            
             else:
                 cf.commander.send_velocity_world_setpoint(going_back[0], going_back[1], going_back[2], 0)
+                print('back')
                 time.sleep(0.1)
             
             current_time = time.time()
-
         land(cf, pos_dict[scf.cf.link_uri])
 
     except Exception as e:
         print(e)
 
 
-if __name__ == '__main__':
-
+def test_run_sequence_multiprocess():
     cflib.crtp.init_drivers()
     factory = CachedCfFactory(rw_cache='./cache')
 

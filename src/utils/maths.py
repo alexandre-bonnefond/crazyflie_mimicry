@@ -2,7 +2,6 @@ import math
 import numpy as np
 
 def VelDecayLinSqrt(x, p, acc, v_max, r0):
-
     vel = (x - r0) * p
 
     if (acc <= 0 or p <= 0 or vel <= 0):
@@ -12,8 +11,6 @@ def VelDecayLinSqrt(x, p, acc, v_max, r0):
             return v_max
         return vel
     
-    if (2 * acc * (x - r0) - acc * acc / p / p < 0):
-        print("ouuuuuuch")
     vel = math.sqrt(2 * acc * (x - r0) - acc * acc / p / p)
     if (vel >= v_max):
         return v_max
@@ -21,7 +18,6 @@ def VelDecayLinSqrt(x, p, acc, v_max, r0):
     return vel
 
 def unitVect(vect):
-
     norm = np.linalg.norm(vect)
 
     if norm < 10e-8:
@@ -32,5 +28,8 @@ def unitVect(vect):
     
     
 def compute_distance(pos1, pos2):
-
     return np.linalg.norm(pos1 - pos2)
+
+
+def angle_with_x(v1):
+  return np.arccos(v1[0] / (np.linalg.norm(v1)))
